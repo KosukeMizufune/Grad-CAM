@@ -46,9 +46,7 @@ class ResNet(chainer.Chain):
         elif pretrained_model:
             npz.load_npz(pretrained_model, self)
 
-    @property
-    def functions(self):
-        return collections.OrderedDict([
+        self.functions = collections.OrderedDict([
             ('conv1', [self.conv1, self.bn1, F.relu]),
             ('pool1', [lambda x: F.max_pooling_2d(x, ksize=3, stride=2)]),
             ('res2', [self.res2]),
@@ -108,7 +106,7 @@ class ResNet(chainer.Chain):
         if layers is None:
             layers = ['prob']
 
-        h = x
+        h = chainer.Variable(x)
         activations = {'input': h}
         target_layers = set(layers)
         for key, funcs in self.functions.items():
@@ -190,9 +188,7 @@ class BottleneckA(chainer.Chain):
                 nobias=True)
             self.bn4 = L.BatchNormalization(out_channels)
 
-    @property
-    def functions(self):
-        return collections.OrderedDict([
+        self.functions = collections.OrderedDict([
             ('conv1', [self.conv1, self.bn1, F.relu]),
             ('conv2', [self.conv2, self.bn2, F.relu]),
             ('conv3', [self.conv3, self.bn3]),
@@ -240,9 +236,7 @@ class BottleneckB(chainer.Chain):
                 nobias=True)
             self.bn3 = L.BatchNormalization(in_channels)
 
-    @property
-    def functions(self):
-        return collections.OrderedDict([
+        self.functions = collections.OrderedDict([
             ('conv1', [self.conv1, self.bn1, F.relu]),
             ('conv2', [self.conv2, self.bn2, F.relu]),
             ('conv3', [self.conv3, self.bn3]),
@@ -404,22 +398,17 @@ class ResNetTest101(chainer.Chain):
             self.fc = L.Linear(None, n_out)
 
         self.size = size
-
-    @property
-    def functions(self):
-        return collections.OrderedDict([
+        self.functions = collections.OrderedDict([
             ('base', [self.base]),
             ('fc', [self.fc]),
         ])
 
     def __call__(self, x, layers=['pool5']):
-        h = chainer.Variable(x)
         if isinstance(layers, str):
             layers = [layers]
         if 'pool5' not in layers:
             layers.extend(['pool5'])
-        acts = self.base(h, layers=layers)
+        acts = self.base(x, layers=layers)
         acts['fc'] = self.fc(acts['pool5'])
         acts['prob'] = F.softmax(acts['fc'])
-        acts['input'] = h
         return acts
